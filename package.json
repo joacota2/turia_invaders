@@ -1,0 +1,10 @@
+{
+  "name": "turia-invaders",
+  "version": "1.0.0",
+  "description": "Retro 16-bit Space Invaders game",
+  "scripts": {
+    "start": "bun server.js",
+    "test": "bun test"
+  },
+  "type": "module"
+}
