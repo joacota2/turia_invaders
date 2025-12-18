@@ -4,6 +4,7 @@
  */
 
 import { CONFIG } from '../config.js';
+import { AssetLoader } from '../AssetLoader.js';
 
 // Enemy types for variety
 export const EnemyType = {
@@ -34,6 +35,14 @@ export class Enemy {
 
         // Set color based on type
         this.color = this.getColorForType(type);
+
+        // Sprite
+        this.sprite = AssetLoader.get('enemy');
+
+        // Animation
+        this.bobOffset = Math.random() * Math.PI * 2; // Random start phase
+        this.bobSpeed = 3;
+        this.bobAmount = 2;
     }
 
     /**
@@ -95,6 +104,9 @@ export class Enemy {
      * @param {number} dt - Delta time in seconds
      */
     update(dt) {
+        // Update bob animation
+        this.bobOffset += this.bobSpeed * dt;
+
         if (this.dying) {
             this.deathTimer -= dt * 1000;
             if (this.deathTimer <= 0) {
@@ -114,7 +126,7 @@ export class Enemy {
 
         const worldPos = this.getWorldPosition(formationOffset);
         const x = worldPos.x;
-        const y = worldPos.y;
+        const y = worldPos.y + Math.sin(this.bobOffset) * this.bobAmount;
 
         ctx.save();
 
@@ -123,13 +135,6 @@ export class Enemy {
             const progress = 1 - (this.deathTimer / this.deathDuration);
             ctx.globalAlpha = 1 - progress;
 
-            // Flash white
-            if (Math.floor(progress * 6) % 2 === 0) {
-                ctx.fillStyle = '#ffffff';
-            } else {
-                ctx.fillStyle = this.color;
-            }
-
             // Scale down
             const scale = 1 - progress * 0.5;
             ctx.translate(x, y);
@@ -137,101 +142,51 @@ export class Enemy {
             ctx.translate(-x, -y);
         }
 
-        // Draw glow
-        ctx.shadowColor = this.color;
-        ctx.shadowBlur = 10;
+        // Try to get sprite
+        if (!this.sprite) {
+            this.sprite = AssetLoader.get('enemy');
+        }
 
-        // Draw enemy body (pixel-art alien style)
-        ctx.fillStyle = this.dying ? ctx.fillStyle : this.color;
-
-        // Main body
-        const halfW = this.width / 2;
-        const halfH = this.height / 2;
-
-        // Draw based on type for variety
-        switch (this.type) {
-            case EnemyType.TYPE1:
-                this.drawType1(ctx, x, y, halfW, halfH);
-                break;
-            case EnemyType.TYPE2:
-                this.drawType2(ctx, x, y, halfW, halfH);
-                break;
-            case EnemyType.TYPE3:
-                this.drawType3(ctx, x, y, halfW, halfH);
-                break;
+        if (this.sprite && !this.dying) {
+            // Draw sprite directly without effects for clean visibility
+            ctx.drawImage(
+                this.sprite,
+                x - this.width / 2,
+                y - this.height / 2,
+                this.width,
+                this.height
+            );
+        } else {
+            // Fallback or death animation
+            ctx.fillStyle = this.dying ? '#ffffff' : this.color;
+            this.renderFallback(ctx, x, y);
         }
 
         ctx.restore();
     }
 
     /**
-     * Draws type 1 enemy (classic space invader shape)
+     * Renders fallback shape
      */
-    drawType1(ctx, x, y, halfW, halfH) {
-        ctx.beginPath();
-        // Body
-        ctx.fillRect(x - halfW * 0.6, y - halfH * 0.4, halfW * 1.2, halfH * 0.8);
-        // Top
-        ctx.fillRect(x - halfW * 0.3, y - halfH * 0.8, halfW * 0.6, halfH * 0.4);
-        // Arms
-        ctx.fillRect(x - halfW, y - halfH * 0.2, halfW * 0.3, halfH * 0.6);
-        ctx.fillRect(x + halfW * 0.7, y - halfH * 0.2, halfW * 0.3, halfH * 0.6);
-        // Legs
-        ctx.fillRect(x - halfW * 0.5, y + halfH * 0.4, halfW * 0.3, halfH * 0.4);
-        ctx.fillRect(x + halfW * 0.2, y + halfH * 0.4, halfW * 0.3, halfH * 0.4);
+    renderFallback(ctx, x, y) {
+        const halfW = this.width / 2;
+        const halfH = this.height / 2;
 
-        // Eyes
-        ctx.fillStyle = CONFIG.COLORS.background;
-        ctx.fillRect(x - halfW * 0.3, y - halfH * 0.2, halfW * 0.2, halfH * 0.2);
-        ctx.fillRect(x + halfW * 0.1, y - halfH * 0.2, halfW * 0.2, halfH * 0.2);
-    }
-
-    /**
-     * Draws type 2 enemy (squid-like shape)
-     */
-    drawType2(ctx, x, y, halfW, halfH) {
-        // Dome top
+        // Simple barrel/cylinder shape
         ctx.beginPath();
-        ctx.arc(x, y - halfH * 0.3, halfW * 0.7, Math.PI, 0);
+        ctx.ellipse(x, y - halfH * 0.7, halfW * 0.8, halfH * 0.3, 0, 0, Math.PI * 2);
         ctx.fill();
 
-        // Body
-        ctx.fillRect(x - halfW * 0.7, y - halfH * 0.3, halfW * 1.4, halfH * 0.6);
+        ctx.fillRect(x - halfW * 0.8, y - halfH * 0.7, halfW * 1.6, halfH * 1.4);
 
-        // Tentacles
-        for (let i = -2; i <= 2; i++) {
-            const tentacleX = x + i * halfW * 0.3;
-            ctx.fillRect(tentacleX - halfW * 0.1, y + halfH * 0.3, halfW * 0.2, halfH * 0.5);
-        }
+        ctx.beginPath();
+        ctx.ellipse(x, y + halfH * 0.7, halfW * 0.8, halfH * 0.3, 0, 0, Math.PI * 2);
+        ctx.fill();
 
-        // Eyes
-        ctx.fillStyle = CONFIG.COLORS.background;
-        ctx.fillRect(x - halfW * 0.4, y - halfH * 0.1, halfW * 0.25, halfH * 0.25);
-        ctx.fillRect(x + halfW * 0.15, y - halfH * 0.1, halfW * 0.25, halfH * 0.25);
-    }
-
-    /**
-     * Draws type 3 enemy (crab-like shape)
-     */
-    drawType3(ctx, x, y, halfW, halfH) {
-        // Body
-        ctx.fillRect(x - halfW * 0.5, y - halfH * 0.5, halfW, halfH);
-
-        // Top spikes
-        ctx.fillRect(x - halfW * 0.7, y - halfH * 0.8, halfW * 0.3, halfH * 0.3);
-        ctx.fillRect(x + halfW * 0.4, y - halfH * 0.8, halfW * 0.3, halfH * 0.3);
-
-        // Claws
-        ctx.fillRect(x - halfW, y - halfH * 0.2, halfW * 0.4, halfH * 0.4);
-        ctx.fillRect(x + halfW * 0.6, y - halfH * 0.2, halfW * 0.4, halfH * 0.4);
-
-        // Bottom
-        ctx.fillRect(x - halfW * 0.3, y + halfH * 0.5, halfW * 0.6, halfH * 0.3);
-
-        // Eyes
-        ctx.fillStyle = CONFIG.COLORS.background;
-        ctx.fillRect(x - halfW * 0.3, y - halfH * 0.3, halfW * 0.2, halfH * 0.2);
-        ctx.fillRect(x + halfW * 0.1, y - halfH * 0.3, halfW * 0.2, halfH * 0.2);
+        // Metal bands
+        ctx.fillStyle = '#444444';
+        ctx.fillRect(x - halfW * 0.85, y - halfH * 0.3, halfW * 1.7, halfH * 0.15);
+        ctx.fillRect(x - halfW * 0.85, y + halfH * 0.2, halfW * 1.7, halfH * 0.15);
     }
 }
 
@@ -257,6 +212,9 @@ export class FormationController {
      * @param {Array<Enemy>} enemies - Array of enemies
      */
     update(dt, enemies) {
+        // Update bounds dynamically for fullscreen support
+        this.maxX = CONFIG.CANVAS.width - CONFIG.GAMEPLAY.enemyStartX;
+
         // Move horizontally
         this.offsetX += this.speed * this.direction * dt;
 

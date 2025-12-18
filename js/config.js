@@ -58,9 +58,9 @@ export const CONFIG = {
 
     // Entity sizes
     SIZES: {
-        player: { width: 48, height: 32 },
-        enemy: { width: 32, height: 32 },
-        boss: { width: 64, height: 64 },
+        player: { width: 72, height: 48 },
+        enemy: { width: 48, height: 48 },
+        boss: { width: 96, height: 96 },
         bullet: { width: 4, height: 12 },
         powerProjectile: { width: 8, height: 8 }
     },
@@ -69,7 +69,7 @@ export const CONFIG = {
     GAMEPLAY: {
         // Player
         playerSpeed: 300,
-        playerStartY: 550,
+        playerStartY: 500,
 
         // Shooting
         bulletSpeed: 500,
@@ -106,7 +106,7 @@ export const CONFIG = {
         speedIncreasePerWave: 5,
 
         // Bottom line (where enemies shouldn't cross)
-        bottomLine: 520
+        bottomLine: 470
     },
 
     // Keyboard controls
@@ -115,5 +115,12 @@ export const CONFIG = {
         right: ['ArrowRight', 'KeyD'],
         shoot: ['Space'],
         power: ['KeyE', 'ShiftLeft', 'ShiftRight']
+    },
+
+    // Asset paths - easy to change
+    ASSETS: {
+        player: 'assets/spaceship.png',
+        enemy: 'assets/small_barrel.png',
+        boss: 'assets/big_barrel.png'
     }
 };

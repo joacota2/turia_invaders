@@ -4,6 +4,7 @@
  */
 
 import { CONFIG } from '../config.js';
+import { AssetLoader } from '../AssetLoader.js';
 
 export class Boss {
     /**
@@ -40,6 +41,10 @@ export class Boss {
 
         // Animation
         this.animationTime = 0;
+        this.pulseAmount = 0.05;
+
+        // Sprite
+        this.sprite = AssetLoader.get('boss');
     }
 
     /**
@@ -47,6 +52,9 @@ export class Boss {
      * @param {number} dt - Delta time in seconds
      */
     update(dt) {
+        // Update bounds dynamically for fullscreen support
+        this.maxX = CONFIG.CANVAS.width - 100;
+
         this.animationTime += dt;
 
         // Update hit flash
@@ -136,6 +144,9 @@ export class Boss {
 
         ctx.save();
 
+        const x = this.x;
+        const y = this.y;
+
         // Death animation
         if (this.dying) {
             const progress = 1 - (this.deathTimer / this.deathDuration);
@@ -145,9 +156,66 @@ export class Boss {
             const explosionSize = progress * 100;
             ctx.fillStyle = `rgba(255, 255, 255, ${0.5 - progress * 0.5})`;
             ctx.beginPath();
-            ctx.arc(this.x, this.y, explosionSize, 0, Math.PI * 2);
+            ctx.arc(x, y, explosionSize, 0, Math.PI * 2);
             ctx.fill();
+
+            // Multiple explosion rings
+            ctx.strokeStyle = `rgba(255, 0, 255, ${0.5 - progress * 0.5})`;
+            ctx.lineWidth = 3;
+            ctx.beginPath();
+            ctx.arc(x, y, explosionSize * 0.7, 0, Math.PI * 2);
+            ctx.stroke();
         }
+
+        // Glow effect
+        ctx.shadowColor = this.hitFlash > 0 ? '#ffffff' : this.glowColor;
+        ctx.shadowBlur = 25;
+
+        // Pulse animation
+        const pulse = 1 + Math.sin(this.animationTime * 2) * this.pulseAmount;
+        const drawWidth = this.width * pulse;
+        const drawHeight = this.height * pulse;
+
+        // Try to get sprite
+        if (!this.sprite) {
+            this.sprite = AssetLoader.get('boss');
+        }
+
+        if (this.sprite && !this.dying) {
+            // Hit flash - draw white overlay
+            if (this.hitFlash > 0) {
+                ctx.filter = 'brightness(3)';
+            }
+
+            // Draw sprite
+            ctx.drawImage(
+                this.sprite,
+                x - drawWidth / 2,
+                y - drawHeight / 2,
+                drawWidth,
+                drawHeight
+            );
+
+            ctx.filter = 'none';
+        } else {
+            // Fallback rendering
+            this.renderFallback(ctx, x, y);
+        }
+
+        ctx.restore();
+
+        // Draw HP bar
+        if (!this.dying) {
+            this.renderHPBar(ctx);
+        }
+    }
+
+    /**
+     * Renders fallback shape when sprite not available
+     */
+    renderFallback(ctx, x, y) {
+        const halfW = this.width / 2;
+        const halfH = this.height / 2;
 
         // Hit flash effect
         if (this.hitFlash > 0) {
@@ -155,16 +223,6 @@ export class Boss {
         } else {
             ctx.fillStyle = this.color;
         }
-
-        // Glow effect
-        ctx.shadowColor = this.dying ? '#ffffff' : this.glowColor;
-        ctx.shadowBlur = 20;
-
-        // Draw boss body (keg/barrel shape)
-        const x = this.x;
-        const y = this.y;
-        const halfW = this.width / 2;
-        const halfH = this.height / 2;
 
         // Barrel body
         ctx.beginPath();
@@ -211,13 +269,6 @@ export class Boss {
             ctx.quadraticCurveTo(x, y + halfH * 0.35, x - halfW * 0.3, y + halfH * 0.2);
             ctx.fill();
         }
-
-        ctx.restore();
-
-        // Draw HP bar
-        if (!this.dying) {
-            this.renderHPBar(ctx);
-        }
     }
 
     /**
@@ -226,9 +277,9 @@ export class Boss {
      */
     renderHPBar(ctx) {
         const barWidth = this.width + 20;
-        const barHeight = 8;
+        const barHeight = 10;
         const barX = this.x - barWidth / 2;
-        const barY = this.y - this.height / 2 - 20;
+        const barY = this.y - this.height / 2 - 25;
 
         ctx.save();
 
@@ -243,13 +294,19 @@ export class Boss {
 
         ctx.fillStyle = fillColor;
         ctx.shadowColor = fillColor;
-        ctx.shadowBlur = 5;
+        ctx.shadowBlur = 8;
         ctx.fillRect(barX + 1, barY + 1, (barWidth - 2) * hpPercentage, barHeight - 2);
 
         // Border
         ctx.strokeStyle = '#ffffff';
-        ctx.lineWidth = 1;
+        ctx.lineWidth = 2;
         ctx.strokeRect(barX, barY, barWidth, barHeight);
+
+        // Boss label
+        ctx.font = '10px "Press Start 2P", monospace';
+        ctx.fillStyle = '#ffffff';
+        ctx.textAlign = 'center';
+        ctx.fillText('BOSS', this.x, barY - 5);
 
         ctx.restore();
     }

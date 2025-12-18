@@ -6,6 +6,7 @@
 import { CONFIG } from '../config.js';
 import { clamp } from '../utils.js';
 import { Bullet } from './Bullet.js';
+import { AssetLoader } from '../AssetLoader.js';
 
 export class Player {
     /**
@@ -27,6 +28,9 @@ export class Player {
         // Visual
         this.color = CONFIG.COLORS.player;
         this.glowColor = CONFIG.COLORS.playerGlow;
+
+        // Sprite
+        this.sprite = AssetLoader.get('player');
     }
 
     /**
@@ -97,10 +101,33 @@ export class Player {
     render(ctx) {
         ctx.save();
 
-        // Draw glow effect
-        ctx.shadowColor = this.glowColor;
-        ctx.shadowBlur = 15;
+        // Try to get sprite (might have loaded after construction)
+        if (!this.sprite) {
+            this.sprite = AssetLoader.get('player');
+        }
 
+        if (this.sprite) {
+            // Draw sprite directly without effects
+            ctx.drawImage(
+                this.sprite,
+                this.x - this.width / 2,
+                this.y - this.height / 2,
+                this.width,
+                this.height
+            );
+        } else {
+            // Fallback to drawn shape
+            this.renderFallback(ctx);
+        }
+
+        ctx.restore();
+    }
+
+    /**
+     * Renders fallback shape when sprite not available
+     * @param {CanvasRenderingContext2D} ctx - Canvas context
+     */
+    renderFallback(ctx) {
         // Draw player ship (retro pixel-art style triangle/spaceship)
         ctx.fillStyle = this.color;
         ctx.beginPath();
@@ -120,27 +147,6 @@ export class Player {
         ctx.lineTo(this.x + this.width / 4, this.y + this.height / 4);
         ctx.closePath();
         ctx.fill();
-
-        // Engine glow
-        ctx.fillStyle = CONFIG.COLORS.enemy1;
-        ctx.shadowColor = CONFIG.COLORS.enemy1;
-        ctx.shadowBlur = 10;
-        const engineWidth = 8;
-        const engineHeight = 6;
-        ctx.fillRect(
-            this.x - engineWidth / 2 - 10,
-            this.y + this.height / 2 - 2,
-            engineWidth,
-            engineHeight
-        );
-        ctx.fillRect(
-            this.x - engineWidth / 2 + 10,
-            this.y + this.height / 2 - 2,
-            engineWidth,
-            engineHeight
-        );
-
-        ctx.restore();
     }
 
     /**
